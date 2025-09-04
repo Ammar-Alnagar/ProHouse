@@ -5,15 +5,20 @@ const ErrorHandler = require('../utils/errorHandler');
 const sendEmail = require('../utils/sendEmail');
 const crypto = require('crypto');
 const cloudinary = require('cloudinary');
+const SKIP_UPLOADS = process.env.NODE_ENV === 'development' || process.env.SKIP_CLOUDINARY_UPLOADS === 'true';
+const PLACEHOLDER_IMG = 'https://via.placeholder.com/150';
 
 // Register User
 exports.registerUser = asyncErrorHandler(async (req, res, next) => {
 
-    const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
-        folder: "avatars",
-        width: 150,
-        crop: "scale",
-    });
+    let uploadRes = null;
+    if (!SKIP_UPLOADS && req.body.avatar) {
+        uploadRes = await cloudinary.v2.uploader.upload(req.body.avatar, {
+            folder: "avatars",
+            width: 150,
+            crop: "scale",
+        });
+    }
 
     const { name, email, gender, password } = req.body;
 
@@ -23,8 +28,8 @@ exports.registerUser = asyncErrorHandler(async (req, res, next) => {
         gender,
         password,
         avatar: {
-            public_id: myCloud.public_id,
-            url: myCloud.secure_url,
+            public_id: uploadRes?.public_id || 'placeholder',
+            url: uploadRes?.secure_url || PLACEHOLDER_IMG,
         },
     });
 
@@ -166,7 +171,7 @@ exports.updateProfile = asyncErrorHandler(async (req, res, next) => {
         email: req.body.email,
     }
 
-    if(req.body.avatar !== "") {
+    if(req.body.avatar && !SKIP_UPLOADS) {
         const user = await User.findById(req.user.id);
 
         const imageId = user.avatar.public_id;

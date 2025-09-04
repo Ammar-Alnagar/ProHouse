@@ -1,8 +1,11 @@
 const Product = require('../models/productModel');
+const Category = require('../models/Category');
 const asyncErrorHandler = require('../middlewares/helpers/asyncErrorHandler');
 const SearchFeatures = require('../utils/searchFeatures');
 const ErrorHandler = require('../utils/errorHandler');
 const cloudinary = require('cloudinary');
+const imageUpload = require('../utils/imageUpload');
+const { PRODUCT_NOT_FOUND, PLEASE_ENTER_ALL_FIELDS } = require('../utils/constants');
 
 // Get All Products
 exports.getAllProducts = asyncErrorHandler(async (req, res, next) => {
@@ -47,7 +50,7 @@ exports.getProductDetails = asyncErrorHandler(async (req, res, next) => {
     const product = await Product.findById(req.params.id);
 
     if (!product) {
-        return next(new ErrorHandler("Product Not Found", 404));
+        return next(new ErrorHandler(PRODUCT_NOT_FOUND, 404));
     }
 
     res.status(200).json({
@@ -56,61 +59,40 @@ exports.getProductDetails = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-// Get All Products ---ADMIN
-exports.getAdminProducts = asyncErrorHandler(async (req, res, next) => {
-    const products = await Product.find();
 
-    res.status(200).json({
-        success: true,
-        products,
-    });
-});
 
 // Create Product ---ADMIN
 exports.createProduct = asyncErrorHandler(async (req, res, next) => {
+    const { name, description, price, category, stock, brandname, specifications, images, logo } = req.body;
 
-    let images = [];
-    if (typeof req.body.images === "string") {
-        images.push(req.body.images);
-    } else {
-        images = req.body.images;
+    if (!name || !description || !price || !category || !stock || !brandname || !specifications || !images || !logo) {
+        return next(new ErrorHandler(PLEASE_ENTER_ALL_FIELDS, 400));
     }
 
-    const imagesLink = [];
+    const imagesLink = await imageUpload(images, "products");
+    const brandLogo = await imageUpload(logo, "brands");
 
-    for (let i = 0; i < images.length; i++) {
-        const result = await cloudinary.v2.uploader.upload(images[i], {
-            folder: "products",
-        });
-
-        imagesLink.push({
-            public_id: result.public_id,
-            url: result.secure_url,
-        });
+    const brand = {
+        name: brandname,
+        logo: brandLogo[0],
     }
-
-    const result = await cloudinary.v2.uploader.upload(req.body.logo, {
-        folder: "brands",
-    });
-    const brandLogo = {
-        public_id: result.public_id,
-        url: result.secure_url,
-    };
-
-    req.body.brand = {
-        name: req.body.brandname,
-        logo: brandLogo
-    }
-    req.body.images = imagesLink;
-    req.body.user = req.user.id;
 
     let specs = [];
-    req.body.specifications.forEach((s) => {
+    specifications.forEach((s) => {
         specs.push(JSON.parse(s))
     });
-    req.body.specifications = specs;
 
-    const product = await Product.create(req.body);
+    const product = await Product.create({
+        name,
+        description,
+        price,
+        category,
+        stock,
+        brand,
+        specifications: specs,
+        images: imagesLink,
+        user: req.user.id,
+    });
 
     res.status(201).json({
         success: true,
@@ -124,56 +106,35 @@ exports.updateProduct = asyncErrorHandler(async (req, res, next) => {
     let product = await Product.findById(req.params.id);
 
     if (!product) {
-        return next(new ErrorHandler("Product Not Found", 404));
+        return next(new ErrorHandler(PRODUCT_NOT_FOUND, 404));
     }
 
     if (req.body.images !== undefined) {
-        let images = [];
-        if (typeof req.body.images === "string") {
-            images.push(req.body.images);
-        } else {
-            images = req.body.images;
-        }
         for (let i = 0; i < product.images.length; i++) {
             await cloudinary.v2.uploader.destroy(product.images[i].public_id);
         }
 
-        const imagesLink = [];
-
-        for (let i = 0; i < images.length; i++) {
-            const result = await cloudinary.v2.uploader.upload(images[i], {
-                folder: "products",
-            });
-
-            imagesLink.push({
-                public_id: result.public_id,
-                url: result.secure_url,
-            });
-        }
+        const imagesLink = await imageUpload(req.body.images, "products");
         req.body.images = imagesLink;
     }
 
-    if (req.body.logo.length > 0) {
+    if (req.body.logo) {
         await cloudinary.v2.uploader.destroy(product.brand.logo.public_id);
-        const result = await cloudinary.v2.uploader.upload(req.body.logo, {
-            folder: "brands",
-        });
-        const brandLogo = {
-            public_id: result.public_id,
-            url: result.secure_url,
-        };
-
+        const brandLogo = await imageUpload(req.body.logo, "brands");
         req.body.brand = {
             name: req.body.brandname,
-            logo: brandLogo
+            logo: brandLogo[0]
         }
     }
 
     let specs = [];
-    req.body.specifications.forEach((s) => {
-        specs.push(JSON.parse(s))
-    });
-    req.body.specifications = specs;
+    if (req.body.specifications) {
+        req.body.specifications.forEach((s) => {
+            specs.push(JSON.parse(s))
+        });
+        req.body.specifications = specs;
+    }
+
     req.body.user = req.user.id;
 
     product = await Product.findByIdAndUpdate(req.params.id, req.body, {
@@ -194,7 +155,7 @@ exports.deleteProduct = asyncErrorHandler(async (req, res, next) => {
     const product = await Product.findById(req.params.id);
 
     if (!product) {
-        return next(new ErrorHandler("Product Not Found", 404));
+        return next(new ErrorHandler(PRODUCT_NOT_FOUND, 404));
     }
 
     for (let i = 0; i < product.images.length; i++) {
@@ -223,7 +184,7 @@ exports.createProductReview = asyncErrorHandler(async (req, res, next) => {
     const product = await Product.findById(productId);
 
     if (!product) {
-        return next(new ErrorHandler("Product Not Found", 404));
+        return next(new ErrorHandler(PRODUCT_NOT_FOUND, 404));
     }
 
     const isReviewed = product.reviews.find(review => review.user.toString() === req.user._id.toString());
@@ -260,7 +221,7 @@ exports.getProductReviews = asyncErrorHandler(async (req, res, next) => {
     const product = await Product.findById(req.query.id);
 
     if (!product) {
-        return next(new ErrorHandler("Product Not Found", 404));
+        return next(new ErrorHandler(PRODUCT_NOT_FOUND, 404));
     }
 
     res.status(200).json({
@@ -275,7 +236,7 @@ exports.deleteReview = asyncErrorHandler(async (req, res, next) => {
     const product = await Product.findById(req.query.productId);
 
     if (!product) {
-        return next(new ErrorHandler("Product Not Found", 404));
+        return next(new ErrorHandler(PRODUCT_NOT_FOUND, 404));
     }
 
     const reviews = product.reviews.filter((rev) => rev._id.toString() !== req.query.id.toString());
@@ -308,5 +269,15 @@ exports.deleteReview = asyncErrorHandler(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
+    });
+});
+
+// Get all categories
+exports.getProductCategories = asyncErrorHandler(async (req, res, next) => {
+    const categories = await Category.find();
+
+    res.status(200).json({
+        success: true,
+        categories,
     });
 });

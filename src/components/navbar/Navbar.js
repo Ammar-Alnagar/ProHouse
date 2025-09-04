@@ -28,8 +28,15 @@ function NavBar() {
           <span className="line d-lg-inline-block d-none"></span>
           <i className="fa-regular fa-heart"></i>
           <Button
+            variant="outline-light"
+            className="btn-primary ms-3 d-none d-lg-inline-block"
+            onClick={() => window.location.assign('/cart')}
+          >
+            Cart
+          </Button>
+          <Button
             variant="primary"
-            className="btn-primary d-none d-lg-inline-block"
+            className="btn-primary d-none d-lg-inline-block ms-2"
             onClick={() => alert("Wallet connection coming soon!")}
           >
             Connect Wallet

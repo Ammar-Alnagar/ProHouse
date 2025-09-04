@@ -31,9 +31,18 @@ const user = require('./routes/userRoute');
 const product = require('./routes/productRoute');
 const order = require('./routes/orderRoute');
 const payment = require('./routes/paymentRoute');
+const cart = require('./routes/cartRoute');
+const page = require('./routes/pageRoute');
+const developer = require('./routes/developerRoute');
 
 app.use('/api/v1', user);
 app.use('/api/v1', product);
+app.use('/api/v1', cart);
+app.use('/api/v1', page);
+app.use('/api/v1', developer);
+
+// Healthcheck
+app.get('/api/v1/health', (req, res) => res.json({ ok: true }));
 app.use('/api/v1', order);
 app.use('/api/v1', payment);
 

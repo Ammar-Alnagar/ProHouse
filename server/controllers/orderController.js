@@ -4,6 +4,8 @@ const Product = require('../models/productModel');
 const ErrorHandler = require('../utils/errorHandler');
 const sendEmail = require('../utils/sendEmail');
 
+const allowGuestCheckout = process.env.ALLOW_GUEST_CHECKOUT === 'true' || process.env.NODE_ENV === 'development';
+
 // Create New Order
 exports.newOrder = asyncErrorHandler(async (req, res, next) => {
 
@@ -26,20 +28,22 @@ exports.newOrder = asyncErrorHandler(async (req, res, next) => {
         paymentInfo,
         totalPrice,
         paidAt: Date.now(),
-        user: req.user._id,
+        user: req.user?._id,
     });
 
-    await sendEmail({
-        email: req.user.email,
-        templateId: process.env.SENDGRID_ORDER_TEMPLATEID,
-        data: {
-            name: req.user.name,
-            shippingInfo,
-            orderItems,
-            totalPrice,
-            oid: order._id,
-        }
-    });
+    if (req.user && process.env.SENDGRID_ORDER_TEMPLATEID) {
+        await sendEmail({
+            email: req.user.email,
+            templateId: process.env.SENDGRID_ORDER_TEMPLATEID,
+            data: {
+                name: req.user.name,
+                shippingInfo,
+                orderItems,
+                totalPrice,
+                oid: order._id,
+            }
+        });
+    }
 
     res.status(201).json({
         success: true,

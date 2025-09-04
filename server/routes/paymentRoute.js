@@ -8,6 +8,6 @@ router.route('/payment/process').post(processPayment);
 
 router.route('/callback').post(paytmResponse);
 
-router.route('/payment/status/:id').get(isAuthenticatedUser, getPaymentStatus);
+router.route('/payment/status/:id').get(getPaymentStatus);
 
 module.exports = router;
