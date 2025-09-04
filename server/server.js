@@ -9,7 +9,15 @@ process.on('uncaughtException', (err) => {
     process.exit(1);
 });
 
-// connectDatabase();
+if (process.env.MONGO_URI) {
+    try {
+        connectDatabase();
+    } catch (e) {
+        console.error('Database connection failed:', e.message);
+    }
+} else {
+    console.warn('MONGO_URI not provided. Skipping DB connection.');
+}
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_NAME,

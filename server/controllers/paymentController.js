@@ -8,9 +8,33 @@ const { v4: uuidv4 } = require('uuid');
 
 const axios = require('axios');
 
+const mockPayments = new Map();
+const isMock = process.env.MOCK_PAYMENTS === 'true';
+
 exports.processPayment = asyncErrorHandler(async (req, res, next) => {
 
     const { amount, email, phoneNo } = req.body;
+
+    if (isMock) {
+        const orderId = 'mock_' + uuidv4();
+        mockPayments.set(orderId, {
+            resultInfo: { resultStatus: 'TXN_SUCCESS', resultCode: '01', resultMsg: 'Mock success' },
+            txnId: 'MOCKTXN' + Date.now(),
+            bankTxnId: 'MOCKBANK' + Date.now(),
+            orderId,
+            txnAmount: String(amount || 0),
+            txnType: 'SALE',
+            gatewayName: 'MOCK',
+            bankName: 'MOCKBANK',
+            mid: 'MOCKMID',
+            paymentMode: 'MOCK',
+            refundAmt: '0.00',
+            txnDate: new Date().toISOString(),
+        });
+        return res.status(200).json({
+            paytmParams: { ORDER_ID: orderId, TXN_AMOUNT: String(amount || 0), EMAIL: email, MOBILE_NO: phoneNo, MOCK: true }
+        });
+    }
 
     var params = {};
 
@@ -47,7 +71,15 @@ exports.processPayment = asyncErrorHandler(async (req, res, next) => {
 // Paytm Callback
 exports.paytmResponse = (req, res, next) => {
 
-    // console.log(req.body);
+    if (isMock) {
+        const { ORDERID } = req.body;
+        const body = mockPayments.get(ORDERID);
+        if (body) {
+            addPayment(body);
+            return res.redirect(`https://${req.get("host")}/order/${body.orderId}`);
+        }
+        return res.status(400).json({ success: false, message: 'Mock order not found' });
+    }
 
     let paytmChecksum = req.body.CHECKSUMHASH;
     delete req.body.CHECKSUMHASH;
@@ -123,6 +155,11 @@ const addPayment = async (data) => {
 }
 
 exports.getPaymentStatus = asyncErrorHandler(async (req, res, next) => {
+ 
+    if (isMock && mockPayments.has(req.params.id)) {
+        const p = mockPayments.get(req.params.id);
+        return res.status(200).json({ success: true, txn: { id: p.txnId, status: p.resultInfo.resultStatus } });
+    }
 
     const payment = await Payment.findOne({ orderId: req.params.id });
 

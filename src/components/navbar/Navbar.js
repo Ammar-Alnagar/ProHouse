@@ -3,6 +3,7 @@ import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import logo from "../../images/logo/logo.png";
 import { Button } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./navbar.css";
 
@@ -10,17 +11,17 @@ function NavBar() {
   return (
     <Navbar expand="lg" className="py-3">
       <Container>
-        <Navbar.Brand href="#" className="me-lg-5">
+        <Navbar.Brand as={Link} to="/" className="me-lg-5">
           <img className="logo" src={logo} alt="logo" />
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="navbarScroll" />
         <Navbar.Collapse id="navbarScroll">
           <Nav className="me-auto my-2 my-lg-0" navbarScroll>
-            <Nav.Link href="#action1">Marketplace</Nav.Link>
-            <Nav.Link href="#action2" className="px-lg-3">
+            <Nav.Link as={Link} to="/properties">Marketplace</Nav.Link>
+            <Nav.Link as={Link} to="/about" className="px-lg-3">
               About Us
             </Nav.Link>
-            <Nav.Link href="#action3">Developers</Nav.Link>
+            <Nav.Link as={Link} to="/developers">Developers</Nav.Link>
           </Nav>
         </Navbar.Collapse>
         <div className="d-flex align-items-center order">
@@ -29,6 +30,7 @@ function NavBar() {
           <Button
             variant="primary"
             className="btn-primary d-none d-lg-inline-block"
+            onClick={() => alert("Wallet connection coming soon!")}
           >
             Connect Wallet
           </Button>

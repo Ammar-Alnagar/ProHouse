@@ -1,29 +1,23 @@
-import { BrowserRouter } from "react-router-dom";
-import AboutUs from "./pages/AboutUs";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NavBar from "./components/navbar/Navbar";
-import Developers from "./pages/Developers";
 import Footer from "./pages/Footer";
-import Join from "./pages/Join";
-import Loading from "./pages/Header";
-import Partners from "./pages/Partners";
+import Home from "./pages/Home";
+import AboutUs from "./pages/AboutUs";
 import Properties from "./pages/Properties";
-import Subscribe from "./pages/Subscribe";
+import DevelopersPage from "./pages/DevelopersPage";
 
 function App() {
   return (
-    <>
-      <BrowserRouter>
-        <NavBar />
-        <Loading />
-        <Partners />
-        <Properties />
-        <AboutUs />
-        <Developers />
-        <Join />
-        <Subscribe />
-        <Footer />
-      </BrowserRouter>
-    </>
+    <BrowserRouter>
+      <NavBar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/properties" element={<Properties />} />
+        <Route path="/developers" element={<DevelopersPage />} />
+      </Routes>
+      <Footer />
+    </BrowserRouter>
   );
 }
 
